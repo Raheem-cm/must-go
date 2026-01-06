@@ -1,70 +1,67 @@
-const { makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
+const {
+    default: makeWASocket,
+    useMultiFileAuthState,
+    DisconnectReason,
+    fetchLatestBaileysVersion,
+    makeInMemoryStore
+} = require("@whiskeysockets/baileys");
+const pino = require("pino");
+const { Boom } = require("@hapi/boom");
+const fs = require("fs");
+const config = require("./config");
 
-console.log('🐉 DRAGON-XR Bot inaanza...');
+// Hifadhi ya muda ya message
+const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
 
-async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState('./auth');
-    
-    const sock = makeWASocket({
+async function startDragonXR() {
+    const { state, saveCreds } = await useMultiFileAuthState("./session");
+    const { version } = await fetchLatestBaileysVersion();
+
+    const client = makeWASocket({
+        version,
+        logger: pino({ level: "silent" }),
+        printQRInTerminal: true,
         auth: state,
-        printQRInTerminal: true
+        browser: ["DRAGON-XR", "Chrome", "1.0.0"]
     });
-    
-    sock.ev.on('connection.update', (update) => {
-        const { connection, qr } = update;
-        
-        if (qr) {
-            qrcode.generate(qr, { small: true });
-        }
-        
-        if (connection === 'open') {
-            console.log('✅ Bot imeunganishwa!');
-            console.log('📱 Owner: 255760003443');
-            console.log('📢 Newsletter: 120363399470975987@newsletter');
-        }
-    });
-    
-    sock.ev.on('creds.update', saveCreds);
-    
-    // Handle messages
-    sock.ev.on('messages.upsert', async ({ messages }) => {
-        const msg = messages[0];
-        
-        if (!msg.message) return;
-        
-        const text = msg.message.conversation || 
-                    msg.message.extendedTextMessage?.text || '';
-        
-        const sender = msg.key.remoteJid;
-        const botName = "DRAGON-XR";
-        
-        console.log(`📩 Message from ${sender}: ${text}`);
-        
-        // Simple commands
-        if (text.toLowerCase() === '.ping') {
-            await sock.sendMessage(sender, { 
-                text: `🏓 Pong! ${botName} is alive!` 
+
+    store.bind(client.ev);
+
+    client.ev.on("connection.update", (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === "close") {
+            let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
+            if (reason === DisconnectReason.loggedOut) {
+                console.log("Session imeisha, tafadhali skani upya.");
+            } else {
+                startDragonXR(); // Ikiwa imekatika kwa sababu nyingine, iwashe tena
+            }
+        } else if (connection === "open") {
+            console.log("✅ DRAGON-XR IMEUNGANISHWA!");
+            client.sendMessage(config.ownerNumber + "@s.whatsapp.net", { 
+                text: `DRAGON-XR IKO ONLINE!\n\nOwner: ${config.ownerNumber}\nRepo: ${config.repoUrl}` 
             });
         }
-        
-        if (text.toLowerCase() === '.menu') {
-            const menu = `
-╔═══════════════════════╗
-       🐉 ${botName}
-╚═══════════════════════╝
-📌 *Commands:*
-• .ping - Check bot status
-• .owner - Contact owner
-• .news - Join newsletter
-• .channel - Official channel
+    });
 
-📞 Owner: 255760003443
-            `;
+    client.ev.on("creds.update", saveCreds);
+
+    // Sehemu ya kupokea meseji
+    client.ev.on("messages.upsert", async (chatUpdate) => {
+        try {
+            const mek = chatUpdate.messages[0];
+            if (!mek.message) return;
+            const from = mek.key.remoteJid;
+            const body = mek.message.conversation || mek.message.extendedTextMessage?.text || "";
             
-            await sock.sendMessage(sender, { text: menu });
+            // Hapa bot itasoma amri zako za baadae
+            if (body === "ping") {
+                await client.sendMessage(from, { text: "PONG! DRAGON-XR IKO ACTIVE 🐉" });
+            }
+        } catch (err) {
+            console.log(err);
         }
     });
 }
 
-startBot().catch(console.error);
+startDragonXR();
