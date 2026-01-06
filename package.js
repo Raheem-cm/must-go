@@ -1,24 +1,21 @@
 {
-  "name": "dragon-xr-bot",
+  "name": "dragon-xr",
   "version": "1.0.0",
-  "description": "DRAGON-XR WhatsApp Bot",
+  "description": "Multi-device WhatsApp Bot DRAGON-XR",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "test": "node test.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.5.0",
+    "@whiskeysockets/baileys": "^6.6.0",
+    "@adiwajshing/keyed-db": "^0.2.4",
+    "pino": "^8.14.1",
     "qrcode-terminal": "^0.12.0",
-    "axios": "^1.6.0",
-    "fs-extra": "^11.0.0",
-    "chalk": "^4.1.2",
-    "moment-timezone": "^0.5.40",
-    "pino": "^8.0.0",
-    "dotenv": "^16.0.0"
+    "axios": "^1.4.0",
+    "fs-extra": "^11.1.1",
+    "path": "^0.12.7",
+    "chalk": "^4.1.2"
   },
-  "keywords": ["whatsapp-bot", "dragon-xr"],
-  "author": "DRAGON-XR Team",
+  "author": "Raheem-cm",
   "license": "MIT"
 }
